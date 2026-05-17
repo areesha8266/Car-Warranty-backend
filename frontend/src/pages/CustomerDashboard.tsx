@@ -69,9 +69,19 @@ const CustomerDashboard = () => {
 
   const handleFileClaim = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createClaim({ ...newClaim, productId: selectedProduct.id });
-    setNewClaim({ category: 'Engine', description: '' });
-    setClaimFormOpen(false);
+    if (!selectedProduct?.id) {
+      alert('Please select a vehicle first.');
+      return;
+    }
+    try {
+      await createClaim({ ...newClaim, productId: selectedProduct.id }).unwrap();
+      setNewClaim({ category: 'Engine', description: '' });
+      setClaimFormOpen(false);
+      setSelectedProduct(null);
+    } catch (error: any) {
+      console.error('Claim submission failed:', error);
+      alert(error?.data?.message || 'Failed to submit claim. Please try again.');
+    }
   };
 
   const handleDeleteVehicle = async (id: string, e: React.MouseEvent) => {
@@ -158,6 +168,11 @@ const CustomerDashboard = () => {
           <h2 className="text-2xl font-bold font-serif text-on_surface">Active Claims</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {claims?.length === 0 && (
+            <p className="text-on_surface-variant col-span-full py-8 text-center">
+              No active claims yet. Select a vehicle and use &quot;File Protection Claim&quot; to submit one.
+            </p>
+          )}
           {claims?.map((c: any, i: number) => (
             <motion.div 
               initial={{ opacity: 0, rotateX: 30, y: 20 }} 
@@ -169,9 +184,11 @@ const CustomerDashboard = () => {
               className="glass p-5 rounded-xl flex items-center justify-between border-l-4 border-primary hover:bg-white/5 transition-all shadow-[0_5px_15px_rgba(41,98,255,0.1)]"
             >
               <div>
-                <p className="text-primary text-[10px] uppercase font-bold tracking-widest mb-1">{c.appDataDir || 'Engine Unit'}</p>
-                <h4 className="font-bold heading-gradient">{c.product?.model}</h4>
-                <p className="text-on_surface-variant text-sm mt-1">{c.description.substring(0, 50)}...</p>
+                <p className="text-primary text-[10px] uppercase font-bold tracking-widest mb-1">{c.category || 'General'}</p>
+                <h4 className="font-bold heading-gradient">{c.product?.model || 'Vehicle'}</h4>
+                <p className="text-on_surface-variant text-sm mt-1">
+                  {(c.description || '').length > 50 ? `${c.description.substring(0, 50)}...` : c.description}
+                </p>
               </div>
               <div className={`px-4 py-1.5 rounded-full text-xs font-bold border ${
                 c.status === 'approved' ? 'border-green-500/50 text-green-400 bg-green-500/5' :
