@@ -3,24 +3,22 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Award, Mail, Lock, UserPlus, ShieldCheck } from 'lucide-react';
 import StitchNavbar from '../components/StitchNavbar';
+import { useRegisterMutation } from '../store/api';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('customer');
   const navigate = useNavigate();
+  const [register, { isLoading, error }] = useRegisterMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('https://car-warranty-backend-production.up.railway.app/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role })
-      });
-      if (res.ok) navigate('/login');
+      await register({ email, password, role }).unwrap();
+      navigate('/login');
     } catch (err) {
-      console.error(err);
+      console.error('Failed to register', err);
     }
   };
 
@@ -73,8 +71,17 @@ const Register = () => {
             </div>
           </div>
 
-          <button className="w-full h-16 bg-gradient-to-r from-gold-600 to-gold-400 text-navy-900 font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_20px_40px_-10px_rgba(212,175,55,0.3)] uppercase tracking-widest">
-            Confirm Eligibility
+          {error && (
+            <p className="text-red-400 text-sm text-center">
+              Registration failed. Check your details or try another email.
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full h-16 bg-gradient-to-r from-gold-600 to-gold-400 text-navy-900 font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_20px_40px_-10px_rgba(212,175,55,0.3)] uppercase tracking-widest disabled:opacity-60"
+          >
+            {isLoading ? 'Submitting…' : 'Confirm Eligibility'}
           </button>
         </form>
 

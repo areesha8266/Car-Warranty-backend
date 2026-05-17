@@ -1,8 +1,9 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { API_BASE_URL } from '../config/api';
 import { logout } from './authSlice';
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: 'https://car-warranty-backend-production.up.railway.app/api',
+  baseUrl: API_BASE_URL,
   prepareHeaders: (headers, { getState }: any) => {
     const token = getState().auth.token;
     if (token) headers.set('authorization', `Bearer ${token}`);
@@ -26,6 +27,9 @@ export const api = createApi({
     login: builder.mutation({
       query: (credentials) => ({ url: '/auth/login', method: 'POST', body: credentials }),
       invalidatesTags: ['User'],
+    }),
+    register: builder.mutation({
+      query: (body) => ({ url: '/auth/register', method: 'POST', body }),
     }),
     getProducts: builder.query({
       query: () => '/products',
@@ -72,6 +76,7 @@ export const api = createApi({
 
 export const {
   useLoginMutation,
+  useRegisterMutation,
   useGetProductsQuery,
   useCreateProductMutation,
   useDeleteProductMutation,
