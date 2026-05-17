@@ -1,35 +1,60 @@
 const { AppDataSource } = require("../data-source");
 const { Claim, ClaimStatus } = require("../entities/Claim");
+const { Product } = require("../entities/Product");
 const { UserRole } = require("../entities/User");
 
 const claimRepository = AppDataSource.getRepository(Claim);
+const productRepository = AppDataSource.getRepository(Product);
 
 const createClaim = async (req, res) => {
   try {
     const { productId, category, description } = req.body;
 
-    const newClaim = new Claim();
-    newClaim.productId = productId;
-    newClaim.category = category;
-    newClaim.description = description;
+    if (!productId || !category || !description?.trim()) {
+      return res.status(400).json({ message: "productId, category, and description are required" });
+    }
 
-    await claimRepository.save(newClaim);
-    res.status(201).json(newClaim);
+    const product = await productRepository.findOne({
+      where: { id: productId, userId: req.user.id },
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Vehicle not found for this account" });
+    }
+
+    const newClaim = claimRepository.create({
+      productId,
+      category,
+      description: description.trim(),
+      status: ClaimStatus.SUBMITTED,
+    });
+
+    const saved = await claimRepository.save(newClaim);
+    const claimWithProduct = await claimRepository.findOne({
+      where: { id: saved.id },
+      relations: ["product"],
+    });
+
+    res.status(201).json(claimWithProduct);
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error("Error creating claim:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
 const getUserClaims = async (req, res) => {
   try {
-    const claims = await claimRepository.find({
-      where: { product: { userId: req.user.id } },
-      relations: ["product"],
-      order: { createdAt: "DESC" }
-    });
+    const claims = await claimRepository
+      .createQueryBuilder("claim")
+      .innerJoinAndSelect("claim.product", "product")
+      .where("product.userId = :userId", { userId: req.user.id })
+      .orderBy("claim.createdAt", "DESC")
+      .getMany();
+
     res.json(claims);
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error("Error fetching user claims:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
